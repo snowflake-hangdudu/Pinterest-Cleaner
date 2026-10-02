@@ -1,0 +1,28 @@
+[data-pc-filtered="true"].pc-hide-filtered,
+.pc-module-hidden {
+  display: none !important;
+}
+
+[data-pc-filtered="true"].pc-show-filtered {
+  display: revert !important;
+  outline: 2px dashed rgba(230, 0, 35, 0.55) !important;
+  outline-offset: 2px;
+  opacity: 0.55 !important;
+  filter: grayscale(0.2);
+}
+
+[data-pc-filtered="true"].pc-show-filtered::after {
+  content: attr(data-pc-reason);
+  position: absolute;
+  z-index: 5;
+  top: 8px;
+  left: 8px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(230, 0, 35, 0.92);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.4;
+  text-transform: uppercase;
+  pointer-events: none;
+}

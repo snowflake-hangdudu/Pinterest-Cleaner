@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinterest Cleaner Settings</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="sidebar__brand">
+          <img src="../../icons/icon48.png" alt="" width="28" height="28">
+          <div>
+            <strong>Pinterest Cleaner</strong>
+            <span id="sidebar-sub">Settings</span>
+          </div>
+        </div>
+        <nav id="nav" class="nav" aria-label="Settings"></nav>
+      </aside>
+      <main class="main">
+        <header class="main__header">
+          <div>
+            <h1 id="view-title">Overview</h1>
+            <p id="view-desc" class="muted">Local filtering preferences</p>
+          </div>
+          <p id="save-status" class="status" role="status"></p>
+        </header>
+        <section id="view" class="view"></section>
+      </main>
+    </div>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

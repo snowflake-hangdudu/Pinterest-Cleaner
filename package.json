@@ -1,0 +1,14 @@
+{
+  "name": "pinterest-cleaner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pinterest Cleaner - AI Filter & Ad Blocker",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "pack": "npm run pack:chromium && npm run pack:firefox",
+    "pack:chromium": "python scripts/pack.py",
+    "pack:firefox": "python scripts/pack_firefox.py",
+    "check": "node --check src/background/service-worker.js && node --check src/content/main.js && node --check src/popup/popup.js && node --check src/options/options.js"
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "default_locale": "en",
+  "name": "__MSG_extName__",
+  "version": "1.0.0",
+  "description": "__MSG_extDesc__",
+  "permissions": ["storage"],
+  "host_permissions": ["https://*.pinterest.com/*"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "scripts": ["src/background/service-worker.js"],
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "__MSG_extName__",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_ui": {
+    "page": "src/options/options.html",
+    "open_in_tab": true
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.pinterest.com/*",
+        "https://pinterest.com/*"
+      ],
+      "css": ["src/content/content.css"],
+      "js": [
+        "src/content/lib/namespace.js",
+        "src/content/lib/ad-locales.js",
+        "src/content/lib/ai-signals.js",
+        "src/content/lib/selectors.js",
+        "src/content/lib/safety.js",
+        "src/content/lib/extractor.js",
+        "src/content/lib/detectors.js",
+        "src/content/lib/engine.js",
+        "src/content/lib/renderer.js",
+        "src/content/lib/page-cleaner.js",
+        "src/content/lib/observer.js",
+        "src/content/lib/diagnostics.js",
+        "src/content/main.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "pinterest-cleaner@hangdudu.local",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
+}

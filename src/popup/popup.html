@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinterest Cleaner</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="popup">
+      <header class="brand">
+        <img class="brand__icon" src="../../icons/icon48.png" alt="">
+        <div class="brand__copy">
+          <p class="brand__name" data-i18n="brandTitle">Pinterest Cleaner</p>
+          <p class="brand__product" data-i18n="brandProduct">AI Filter &amp; Ad Blocker</p>
+        </div>
+        <label class="power" title="ON/OFF">
+          <input id="enabled" type="checkbox" role="switch" checked>
+          <span class="power__dot" aria-hidden="true"></span>
+        </label>
+      </header>
+
+      <section class="stats" aria-live="polite">
+        <div class="stats__head">
+          <span data-i18n="todayCleaned">Cleaned today</span>
+          <strong id="stat-total">0</strong>
+        </div>
+        <div class="stats__grid">
+          <div><span data-i18n="ai">AI content</span><b id="stat-ai">0</b></div>
+          <div><span data-i18n="ads">Promoted</span><b id="stat-ad">0</b></div>
+          <div><span data-i18n="keywords">Keywords</span><b id="stat-keyword">0</b></div>
+          <div><span data-i18n="creators">Creators</span><b id="stat-creator">0</b></div>
+        </div>
+      </section>
+
+      <section class="board">
+        <label class="setting" for="ai-enabled">
+          <span class="setting__copy">
+            <span class="setting__name" data-i18n="aiFilter">AI filter</span>
+            <span class="setting__detail" id="ai-mode-label" data-i18n="aiStandard">Standard</span>
+          </span>
+          <input class="switch" id="ai-enabled" type="checkbox" role="switch" checked>
+        </label>
+
+        <label class="setting" for="ads-enabled">
+          <span class="setting__copy">
+            <span class="setting__name" data-i18n="adFilter">Ads &amp; promoted</span>
+          </span>
+          <input class="switch" id="ads-enabled" type="checkbox" role="switch" checked>
+        </label>
+
+        <button id="open-rules" class="nav-row" type="button">
+          <span data-i18n="customRules">Custom rules</span>
+          <span id="rules-count" class="nav-row__meta">0</span>
+        </button>
+        <button id="open-page-cleaner" class="nav-row" type="button">
+          <span data-i18n="pageCleaner">Page cleaner</span>
+          <span class="nav-row__chevron" aria-hidden="true">›</span>
+        </button>
+      </section>
+
+      <section class="actions">
+        <label class="setting" for="show-filtered">
+          <span class="setting__copy">
+            <span class="setting__name" data-i18n="showFiltered">Show filtered content</span>
+          </span>
+          <input class="switch" id="show-filtered" type="checkbox" role="switch">
+        </label>
+        <div class="pause-row">
+          <button id="pause-5" type="button" data-i18n="pause5">Pause 5 min</button>
+          <button id="pause-30" type="button" data-i18n="pause30">Pause 30 min</button>
+          <button id="pause-off" type="button" data-i18n="pauseOff">Resume</button>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <button id="open-options" type="button" data-i18n="options">Open settings</button>
+        <p data-i18n="privacyNote">Local only · no account · no upload</p>
+      </footer>
+      <p id="status" class="sr-only" role="status"></p>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
