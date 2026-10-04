@@ -28,9 +28,41 @@
     .trim()
     .toLowerCase();
 
+  const CJK_PROMO = new Set(['赞助', '贊助', '推广', '推廣']);
+
   PC.labelMatches = (text, dictionary) => {
     const value = PC.normalizeLabel(text);
     if (!value || value.length > 96) return false;
-    return dictionary.some((item) => value === item || value.startsWith(`${item} `) || value.includes(` ${item} `));
+    const compact = value.replace(/\s+/g, '');
+    return dictionary.some((item) => {
+      const token = PC.normalizeLabel(item);
+      if (!token) return false;
+      if (/[^\x00-\x7f]/.test(token)) {
+        if (value === token || value === `${token}内容` || value === `${token}內容`) return true;
+        if (CJK_PROMO.has(token) && compact.startsWith(token)) {
+          const rest = compact.slice(token.length);
+          // 赞助的 Pin 图 / 赞助的Pin图 / 贊助的 Pin
+          if (!rest || rest === '内容' || rest === '內容') return true;
+          if (/^的?pin(图|圖)?$/.test(rest)) return true;
+          if (rest.startsWith('的pin')) return true;
+        }
+        return value.startsWith(`${token} `);
+      }
+      return value === token
+        || value.startsWith(`${token} `)
+        || value.endsWith(` ${token}`)
+        || value.includes(` ${token} `);
+    });
+  };
+
+  /** Broader scan for promo badges inside a short card chrome string. */
+  PC.textHasPromotedLabel = (text) => {
+    const value = PC.normalizeLabel(text);
+    if (!value) return false;
+    if (PC.labelMatches(value, PC.AD_LABELS.promoted)) return true;
+    const compact = value.replace(/\s+/g, '');
+    if (/(赞助|贊助)的?pin(图|圖)?/.test(compact)) return true;
+    if (/(^|[^a-z])(promoted|sponsored)([^a-z]|$)/i.test(value)) return true;
+    return false;
   };
 })();

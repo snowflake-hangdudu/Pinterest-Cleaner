@@ -5,10 +5,10 @@
   const REGISTRY = {
     'pin.container': [
       '[data-test-id="pin"]',
+      '[data-test-id="closeup-lego-container"][role="group"]',
       '[data-test-id="pinWrapper"]',
       '[data-test-id="pinrep"]',
-      '[data-grid-item="true"]',
-      'div[data-test-id*="pin" i]'
+      '[data-grid-item="true"]'
     ],
     'pin.link': [
       'a[href*="/pin/"]',
@@ -23,6 +23,7 @@
     ],
     'pin.description': [
       '[data-test-id="pinrep-description"]',
+      '[data-test-id="truncated-description"]',
       '[data-test-id="description"]',
       '[data-test-id="pin-description"]'
     ],
@@ -34,7 +35,7 @@
     'pin.creator': [
       '[data-test-id="creator-profile-link"]',
       '[data-test-id="user-avatar"]',
-      'a[href^="/"][href*="/"]'
+      '[data-test-id="pinrep-footer"] a[href^="/"]:not([href^="/pin/"]):not([href^="/search/"]):not([href^="/ideas/"])'
     ],
     'pin.source': [
       '[data-test-id="pinrep-source-link"]',
@@ -47,25 +48,7 @@
       '[aria-label*="Promoted" i]',
       '[aria-label*="Sponsored" i]'
     ],
-    'pin.aiLabel': [
-      '[data-test-id*="ai" i]',
-      '[aria-label*="AI" i]',
-      '[aria-label*="Gen AI" i]',
-      '[aria-label*="generated" i]'
-    ],
-    'page.promoModule': [
-      '[data-test-id*="promoted" i]',
-      '[data-test-id*="ads" i]',
-      '[data-test-id*="shopping-module" i]'
-    ],
-    'page.shoppingRecs': [
-      '[data-test-id*="shopping" i]',
-      '[data-test-id*="product" i]'
-    ],
-    'page.related': [
-      '[data-test-id*="related" i]',
-      '[data-test-id*="more-ideas" i]'
-    ]
+
   };
 
   PC.selectorRegistry = {
@@ -89,7 +72,8 @@
       const out = [];
       for (const selector of this.get(key)) {
         try {
-          for (const node of root.querySelectorAll(selector)) {
+          const matches = [...(root.matches?.(selector) ? [root] : []), ...root.querySelectorAll(selector)];
+          for (const node of matches) {
             if (!seen.has(node)) {
               seen.add(node);
               out.push(node);
@@ -107,8 +91,7 @@
         title: this.query(doc, 'pin.title') != null,
         creator: this.query(doc, 'pin.creator') != null,
         source: this.query(doc, 'pin.source') != null,
-        adLabel: this.query(doc, 'pin.adLabel') != null,
-        aiLabel: this.query(doc, 'pin.aiLabel') != null
+        adLabel: this.query(doc, 'pin.adLabel') != null
       };
     }
   };

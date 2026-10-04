@@ -2,6 +2,14 @@
   'use strict';
   const PC = globalThis.PC;
 
+  function closestCard(node) {
+    const el = node?.nodeType === 1 ? node : node?.parentElement;
+    if (!el?.closest) return null;
+    return el.closest(
+      '[data-test-id="pin"], [data-test-id="pinWrapper"], [data-test-id="pinrep"], [data-grid-item="true"], [data-test-id="closeup-lego-container"]'
+    );
+  }
+
   PC.observer = {
     healthy: false,
     _mo: null,
@@ -17,6 +25,16 @@
 
       this._mo = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
+          const card = closestCard(mutation.target);
+          if (card) {
+            card.removeAttribute(PC.ATTR.processed);
+            // Allow late "赞助的 Pin 图" footers to re-decide after an early ALLOW.
+            const pin = card.matches('[data-test-id="pin"]')
+              ? card
+              : card.querySelector('[data-test-id="pin"]') || card;
+            if (this._processed && pin) this._processed.delete?.(pin);
+            this._pending.add(card);
+          }
           for (const node of mutation.addedNodes) {
             if (node.nodeType !== 1) continue;
             this._pending.add(node);
@@ -27,9 +45,24 @@
 
       this._mo.observe(document.documentElement || document.body, {
         childList: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ['href', 'alt', 'aria-label', 'data-test-id', 'data-test-pin-id', 'src'],
         subtree: true
       });
 
+      if (!this._loadHooked) {
+        this._loadHooked = true;
+        document.addEventListener('load', (event) => {
+          const card = event.target.closest?.(
+            '[data-test-id="pin"], [data-test-id="closeup-lego-container"], [data-grid-item="true"]'
+          );
+          if (card) {
+            card.removeAttribute(PC.ATTR.processed);
+            this.enqueue(card);
+          }
+        }, true);
+      }
       this.enqueue(document);
       this._hookSpa();
     },
@@ -74,11 +107,20 @@
       return Boolean(this._processed && element && this._processed.has(element));
     },
 
+    forget(element, key) {
+      if (this._processed && element && this._processed.delete) this._processed.delete(element);
+      if (key) this._seenKeys.delete(key);
+    },
+
     _hookSpa() {
       if (this._spaHooked) return;
       this._spaHooked = true;
       const notify = () => {
         this._seenKeys.clear();
+        for (const element of document.querySelectorAll(`[${PC.ATTR.processed}]`)) {
+          element.removeAttribute(PC.ATTR.processed);
+        }
+        this._processed = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
         this.enqueue(document);
         PC.onRouteChange?.();
       };
@@ -93,6 +135,7 @@
       };
       wrap('pushState');
       wrap('replaceState');
+      window.addEventListener('pc:route-change', notify);
       window.addEventListener('popstate', notify);
       window.addEventListener('hashchange', notify);
     }

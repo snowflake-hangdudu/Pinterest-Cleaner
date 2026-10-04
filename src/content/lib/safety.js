@@ -11,7 +11,8 @@
       if (element === document.body || element === document.documentElement) return false;
       const rect = element.getBoundingClientRect();
       if (rect.width > window.innerWidth * 0.95 && rect.height > window.innerHeight * 0.8) return false;
-      if (rect.width < 40 || rect.height < 40) return false;
+      const identifiedCard = element.matches('[data-test-id="pin"], [data-test-id="closeup-lego-container"][role="group"]') && Boolean(element.querySelector('img, video, a[href*="/pin/"]'));
+      if ((rect.width < 40 || rect.height < 40) && !identifiedCard && element.getAttribute(PC.ATTR.filtered) !== 'true') return false;
       const pinLinks = element.querySelectorAll('a[href*="/pin/"]').length;
       if (pinLinks > 8) return false;
       return true;

@@ -11,7 +11,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   schemaVersion: SCHEMA_VERSION,
   enabled: true,
   language: 'en',
-  theme: 'default',
+  theme: 'obsidian',
   pause: {
     mode: 'off',
     until: 0,
@@ -39,6 +39,11 @@ export const DEFAULT_SETTINGS = Object.freeze({
     hideGif: false,
     hideShopping: false,
     hideIdeaPin: false
+  },
+  filterPages: {
+    home: true,
+    search: true,
+    detail: true
   },
   pageCleaner: {
     hidePromoModules: true,
@@ -73,7 +78,8 @@ function asString(value, fallback) {
 }
 
 function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function normalizeKeywordRule(rule) {
@@ -151,13 +157,30 @@ export function normalizeSettings(value) {
   const ai = source.ai && typeof source.ai === 'object' ? source.ai : {};
   const ads = source.ads && typeof source.ads === 'object' ? source.ads : {};
   const contentTypes = source.contentTypes && typeof source.contentTypes === 'object' ? source.contentTypes : {};
+  const filterPages = source.filterPages && typeof source.filterPages === 'object' ? source.filterPages : {};
   const pageCleaner = source.pageCleaner && typeof source.pageCleaner === 'object' ? source.pageCleaner : {};
 
   return {
     schemaVersion: SCHEMA_VERSION,
     enabled: asBoolean(source.enabled, DEFAULT_SETTINGS.enabled),
-    language: ['en', 'zh-CN', 'auto'].includes(source.language) ? source.language : DEFAULT_SETTINGS.language,
-    theme: asString(source.theme, DEFAULT_SETTINGS.theme).match(/^[a-z][a-z0-9-]{0,40}$/) ? source.theme : DEFAULT_SETTINGS.theme,
+    language: (() => {
+      if (source.language === 'zh-CN' || source.language === 'zh-TW' || source.language === 'en') return source.language;
+      if (source.language === 'auto') {
+        const browserLang = globalThis.chrome?.i18n?.getUILanguage?.()
+          || globalThis.browser?.i18n?.getUILanguage?.()
+          || globalThis.navigator?.language
+          || 'en';
+        if (/zh[-_]?(?:tw|hk|mo|hant)\b/i.test(browserLang)) return 'zh-TW';
+        if (/^zh\b/i.test(browserLang)) return 'zh-CN';
+        return 'en';
+      }
+      return DEFAULT_SETTINGS.language;
+    })(),
+    theme: (() => {
+      const raw = asString(source.theme, DEFAULT_SETTINGS.theme);
+      if (raw === 'default') return DEFAULT_SETTINGS.theme;
+      return /^[a-z][a-z0-9-]{0,40}$/.test(raw) ? raw : DEFAULT_SETTINGS.theme;
+    })(),
     pause: {
       mode: ['off', 'timed', 'tab', 'until_enable'].includes(pause.mode) ? pause.mode : 'off',
       until: Number(pause.until) || 0,
@@ -186,6 +209,13 @@ export function normalizeSettings(value) {
       hideShopping: asBoolean(contentTypes.hideShopping, false),
       hideIdeaPin: asBoolean(contentTypes.hideIdeaPin, false)
     },
+    filterPages: (() => {
+      const home = asBoolean(filterPages.home, true);
+      const search = asBoolean(filterPages.search, true);
+      const detail = asBoolean(filterPages.detail, true);
+      if (!home && !search && !detail) return { home: true, search: false, detail: false };
+      return { home, search, detail };
+    })(),
     pageCleaner: {
       hidePromoModules: asBoolean(pageCleaner.hidePromoModules, true),
       hideShoppingRecs: asBoolean(pageCleaner.hideShoppingRecs, false),
@@ -208,9 +238,24 @@ const store = createSettingsStore({
 });
 
 export const loadSettings = store.load;
-export const saveSettings = store.save;
-export const replaceSettings = store.replace;
-export const clearSettings = store.clear;
+async function writeThroughBackground(type, value, local) {
+  const runtime = (globalThis.browser ?? globalThis.chrome)?.runtime;
+  if (typeof document !== 'undefined' && runtime?.sendMessage) {
+    const response = await runtime.sendMessage({ type, value, patch: value });
+    if (!response?.ok) throw new Error(response?.error || 'Settings write failed');
+    return response.settings;
+  }
+  return local(value);
+}
+export const saveSettings = (patch) => writeThroughBackground('PC_SAVE_SETTINGS', patch, store.save);
+export const replaceSettings = (value) => writeThroughBackground('PC_REPLACE_SETTINGS', value, store.replace);
+export const clearSettings = () => writeThroughBackground('PC_CLEAR_SETTINGS', undefined, store.clear);
+export const incrementStats = (reason, amount = 1) => store.save((current) => {
+  const stats = normalizeStats(current.stats);
+  const key = { AI: 'ai', AD: 'ad', KEYWORD: 'keyword', CREATOR: 'creator', DOMAIN: 'domain', CONTENT_TYPE: 'contentType', PAGE_CLEANER: 'pageCleaner' }[reason];
+  if (key && Number.isInteger(amount) && amount > 0 && amount <= 1000) { stats[key] += amount; stats.total += amount; }
+  return { stats };
+});
 
 export function createId(prefix) {
   return uid(prefix);
@@ -248,6 +293,11 @@ export function exportBackup(settings) {
 
 export function importBackup(raw) {
   const payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
-  const settings = payload?.settings || payload;
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('Invalid backup');
+  if (payload.app && payload.app !== 'pinterest-cleaner') throw new Error('Backup belongs to a different application');
+  const settings = payload.settings || payload;
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) throw new Error('Invalid settings');
+  if (Number(payload.schemaVersion || settings.schemaVersion || 1) > SCHEMA_VERSION) throw new Error('Backup requires a newer extension version');
+  if (!['enabled', 'ai', 'keywordRules', 'creatorRules', 'domainRules', 'whitelistRules', 'schemaVersion'].some((key) => key in settings)) throw new Error('No recognized settings in backup');
   return normalizeSettings(settings);
 }

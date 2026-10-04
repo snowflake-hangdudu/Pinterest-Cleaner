@@ -20,7 +20,9 @@ export function createSettingsStore({ key, defaults = {}, normalize = (value) =>
 
   async function save(patch) {
     const operation = writeQueue.then(async () => {
-      const next = normalizeValue({ ...(await load()), ...(patch || {}) });
+      const current = await load();
+      const changes = typeof patch === 'function' ? patch(current) : patch;
+      const next = normalizeValue({ ...current, ...(changes || {}) });
       await getStorage().set({ [key]: next });
       return next;
     });

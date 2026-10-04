@@ -1,10 +1,25 @@
-[data-pc-filtered="true"].pc-hide-filtered,
+/* Preserve masonry measurements: Pinterest also observes these card sizes. */
+[data-pc-collapsed-slot="1"],
+[data-pc-filtered="true"].pc-hide-filtered {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.pc-flow-collapsed,
 .pc-module-hidden {
   display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  max-height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
 }
 
 [data-pc-filtered="true"].pc-show-filtered {
-  display: revert !important;
   outline: 2px dashed rgba(230, 0, 35, 0.55) !important;
   outline-offset: 2px;
   opacity: 0.55 !important;
@@ -25,4 +40,30 @@
   line-height: 1.4;
   text-transform: uppercase;
   pointer-events: none;
+}
+
+
+#pc-empty-video-notice {
+  position: fixed;
+  z-index: 1000;
+  top: 210px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(460px, 80vw);
+  padding: 20px 24px;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  background: #fff;
+  color: #333;
+  box-shadow: 0 4px 20px #0001;
+  font: 14px/1.6 system-ui, sans-serif;
+  text-align: center;
+}
+#pc-empty-video-notice button {
+  border: 0;
+  border-radius: 20px;
+  padding: 10px 18px;
+  background: #e60023;
+  color: #fff;
+  cursor: pointer;
 }

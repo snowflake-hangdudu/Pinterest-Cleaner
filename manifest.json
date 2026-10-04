@@ -40,19 +40,29 @@
       "js": [
         "src/content/lib/namespace.js",
         "src/content/lib/ad-locales.js",
-        "src/content/lib/ai-signals.js",
         "src/content/lib/selectors.js",
         "src/content/lib/safety.js",
         "src/content/lib/extractor.js",
         "src/content/lib/detectors.js",
         "src/content/lib/engine.js",
+        "src/content/lib/layout.js",
         "src/content/lib/renderer.js",
-        "src/content/lib/page-cleaner.js",
         "src/content/lib/observer.js",
         "src/content/lib/diagnostics.js",
         "src/content/main.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.pinterest.com/*", "https://pinterest.com/*"],
+      "js": ["src/content/data-bridge.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://*.pinterest.com/*", "https://pinterest.com/*"],
+      "js": ["src/content/data-filter.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
     }
   ]
 }

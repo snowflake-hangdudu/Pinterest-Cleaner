@@ -71,51 +71,26 @@
       return safeDetect('whitelist', (p) => {
         for (const rule of settings.whitelistRules || []) {
           if (!rule.enabled || !rule.value) continue;
-          if (rule.type === 'creator') {
-            const value = rule.value.replace(/^@/, '').toLowerCase();
+          const value = String(rule.value).toLowerCase();
+          if (rule.type === 'keyword') {
+            const blob = `${p.title || ''} ${p.description || ''} ${p.alt || ''} ${p.textBlob || ''}`.toLowerCase();
+            if (blob.includes(value)) {
+              return { matched: true, confidence: 'high', reason: 'WHITELIST', detector: 'whitelist', ruleId: rule.id };
+            }
+          } else if (rule.type === 'creator') {
             const username = (p.creator?.username || '').toLowerCase();
             const name = (p.creator?.name || '').toLowerCase();
-            if (username === value || name === value || username.includes(value)) {
+            if (username === value.replace(/^@/, '') || name === value) {
               return { matched: true, confidence: 'high', reason: 'WHITELIST', detector: 'whitelist', ruleId: rule.id };
             }
-          }
-          if (rule.type === 'domain') {
-            const domain = p.source?.domain || '';
-            if (domain && (domain === rule.value.toLowerCase() || domain.endsWith(`.${rule.value.toLowerCase()}`))) {
-              return { matched: true, confidence: 'high', reason: 'WHITELIST', detector: 'whitelist', ruleId: rule.id };
-            }
-          }
-          if (rule.type === 'keyword') {
-            const blob = `${p.title || ''} ${p.description || ''} ${p.alt || ''}`.toLowerCase();
-            if (blob.includes(rule.value.toLowerCase())) {
+          } else if (rule.type === 'domain') {
+            const domain = (p.source?.domain || '').toLowerCase();
+            if (domain === value.replace(/^www\./, '') || domain.endsWith(`.${value.replace(/^www\./, '')}`)) {
               return { matched: true, confidence: 'high', reason: 'WHITELIST', detector: 'whitelist', ruleId: rule.id };
             }
           }
         }
         return noMatch('whitelist');
-      }, pin);
-    },
-
-    ai(pin, settings) {
-      return safeDetect('ai', (p) => {
-        if (!settings.ai?.enabled) return noMatch('ai');
-        const mode = settings.ai.mode || 'standard';
-        if (p.pinterestAI || PC.textHasAny(p.labels.join(' '), PC.AI_OFFICIAL) || PC.textHasAny(p.textBlob, PC.AI_OFFICIAL)) {
-          return { matched: true, confidence: 'high', reason: 'PINTEREST_AI_LABEL', detector: 'ai' };
-        }
-        if (mode === 'strict') return noMatch('ai');
-
-        const structured = p.labels.some((label) => /ai|gen[_-]?ai|generated/i.test(label))
-          || Boolean(p.element.querySelector('[data-test-id*="ai" i]'));
-        if (structured) {
-          return { matched: true, confidence: 'medium', reason: 'STRUCTURED_AI_SIGNAL', detector: 'ai' };
-        }
-        if (mode === 'standard') return noMatch('ai');
-
-        if (PC.textHasAny(p.textBlob, PC.AI_HEURISTICS)) {
-          return { matched: true, confidence: 'low', reason: 'AI_KEYWORD_HEURISTIC', detector: 'ai' };
-        }
-        return noMatch('ai');
       }, pin);
     },
 
@@ -128,8 +103,6 @@
           || Boolean(PC.selectorRegistry.query(p.element, 'pin.adLabel'));
         if (!labelHit) return noMatch('ad');
 
-        if (p.isShopping && settings.ads.shoppingAds === false) return noMatch('ad');
-        if (!settings.ads.promoted && !settings.ads.sponsored) return noMatch('ad');
         return { matched: true, confidence: 'high', reason: 'AD', detector: 'ad' };
       }, pin);
     },
@@ -153,7 +126,7 @@
           if (!rule.enabled) continue;
           const u = (rule.username || '').toLowerCase();
           const d = (rule.displayName || '').toLowerCase();
-          if ((u && username && (username === u || username.includes(u))) || (d && name && name.includes(d))) {
+          if ((u && username && username === u) || (d && name && name === d)) {
             return { matched: true, confidence: 'high', reason: 'CREATOR', detector: 'creator', ruleId: rule.id };
           }
         }
@@ -177,9 +150,6 @@
       return safeDetect('contentType', (p) => {
         const cfg = settings.contentTypes || {};
         if (cfg.hideVideo && p.isVideo) return { matched: true, confidence: 'medium', reason: 'CONTENT_TYPE', detector: 'contentType' };
-        if (cfg.hideGif && p.isGif) return { matched: true, confidence: 'medium', reason: 'CONTENT_TYPE', detector: 'contentType' };
-        if (cfg.hideShopping && p.isShopping) return { matched: true, confidence: 'medium', reason: 'CONTENT_TYPE', detector: 'contentType' };
-        if (cfg.hideIdeaPin && p.isIdeaPin) return { matched: true, confidence: 'medium', reason: 'CONTENT_TYPE', detector: 'contentType' };
         return noMatch('contentType');
       }, pin);
     }

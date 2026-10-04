@@ -10,5 +10,8 @@
     "pack:chromium": "python scripts/pack.py",
     "pack:firefox": "python scripts/pack_firefox.py",
     "check": "node --check src/background/service-worker.js && node --check src/content/main.js && node --check src/popup/popup.js && node --check src/options/options.js"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
   }
 }

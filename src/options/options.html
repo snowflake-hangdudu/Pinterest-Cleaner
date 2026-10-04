@@ -3,32 +3,101 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pinterest Cleaner Settings</title>
+    <title data-i18n="settingsTitle">Pinterest Cleaner Settings</title>
+    <link rel="stylesheet" href="../ui/tokens.css">
+    <link rel="stylesheet" href="../ui/components.css">
+    <link rel="stylesheet" href="../ui/ambient.css">
     <link rel="stylesheet" href="options.css">
   </head>
-  <body>
-    <div class="app">
-      <aside class="sidebar">
-        <div class="sidebar__brand">
-          <img src="../../icons/icon48.png" alt="" width="28" height="28">
-          <div>
-            <strong>Pinterest Cleaner</strong>
-            <span id="sidebar-sub">Settings</span>
+  <body class="btu-root pc-options-page">
+    <div class="btu-app-shell pc-options-shell">
+      <main class="pc-options">
+        <header class="pc-options-header">
+          <img class="btu-brand-mark" src="../../icons/icon32.png" alt="" width="36" height="36">
+          <div class="pc-options-header__copy">
+            <h1 class="pc-options-header__title" data-i18n="brandTitle">Pinterest Cleaner</h1>
+            <p class="pc-options-header__desc" data-i18n="settingsDesc">Keep Pinterest cleaner and more focused</p>
           </div>
-        </div>
-        <nav id="nav" class="nav" aria-label="Settings"></nav>
-      </aside>
-      <main class="main">
-        <header class="main__header">
-          <div>
-            <h1 id="view-title">Overview</h1>
-            <p id="view-desc" class="muted">Local filtering preferences</p>
-          </div>
-          <p id="save-status" class="status" role="status"></p>
         </header>
-        <section id="view" class="view"></section>
+
+        <section id="home-panel" class="pc-home">
+          <label class="pc-lang-row" for="language-select">
+            <span class="setting-copy">
+              <strong data-i18n="language">Language</strong>
+              <small data-i18n="languageHelp">Choose the extension interface language</small>
+            </span>
+            <select id="language-select" class="btu-select" data-i18n-aria="language">
+              <option value="en">English</option>
+              <option value="zh-CN">简体中文</option>
+              <option value="zh-TW">繁體中文</option>
+            </select>
+          </label>
+
+          <section class="pc-section">
+            <h2 class="pc-section-title" data-i18n="theme">Theme</h2>
+            <div id="theme-picker" class="dm-theme-grid" role="radiogroup" data-i18n-aria="theme" aria-label="Theme"></div>
+          </section>
+
+          <section class="pc-section">
+            <h2 class="pc-section-title" data-i18n="filterPages">Filter pages</h2>
+            <div id="filter-pages" class="pc-page-chips" role="group" aria-label="Filter pages"></div>
+          </section>
+
+          <section class="pc-section">
+            <h2 class="pc-section-title" data-i18n="navFilters">Filter rules</h2>
+            <div id="filter-nav" class="pc-nav-list">
+              <button type="button" class="pc-nav-row" data-section="keywords">
+                <span data-i18n="navKeywords">Keyword filter</span>
+                <span class="pc-nav-chevron" aria-hidden="true">›</span>
+              </button>
+              <button type="button" class="pc-nav-row" data-section="creators">
+                <span data-i18n="navCreators">Creator filter</span>
+                <span class="pc-nav-chevron" aria-hidden="true">›</span>
+              </button>
+              <button type="button" class="pc-nav-row" data-section="domains">
+                <span data-i18n="navDomains">Source filter</span>
+                <span class="pc-nav-chevron" aria-hidden="true">›</span>
+              </button>
+              <button type="button" class="pc-nav-row" data-section="types">
+                <span data-i18n="navTypes">Content type</span>
+                <span class="pc-nav-chevron" aria-hidden="true">›</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="pc-section">
+            <h2 class="pc-section-title" data-i18n="dataBackup">Data &amp; backup</h2>
+            <div class="pc-backup-actions">
+              <button id="export-settings" class="btu-btn btu-btn--primary" type="button" data-i18n="exportSettings">Export settings</button>
+              <button id="import-settings" class="btu-btn btu-btn--secondary" type="button" data-i18n="importSettings">Import settings</button>
+              <input id="backup-file" type="file" accept="application/json,.json" hidden>
+            </div>
+            <div class="pc-reset-block">
+              <span class="pc-reset-copy" data-i18n="resetAllSettings">Restore all settings</span>
+              <button id="reset-defaults" class="btu-btn btu-btn--danger" type="button" data-i18n="resetDefaults">Reset defaults</button>
+            </div>
+          </section>
+
+          <footer class="pc-legal">
+            <span data-i18n="versionShort">v1.0.0</span>
+            <span aria-hidden="true">·</span>
+            <span data-i18n="sendFeedback">Feedback</span>
+            <span aria-hidden="true">·</span>
+            <a href="mailto:hangdudu0@agent.qq.com">hangdudu0@agent.qq.com</a>
+          </footer>
+        </section>
+
+        <section id="detail-panel" class="pc-detail hidden">
+          <button id="back-home" class="pc-back" type="button">
+            <span aria-hidden="true">‹</span>
+            <span data-i18n="back">Back</span>
+          </button>
+          <h2 class="pc-detail-title" id="view-title">Keyword filter</h2>
+          <div id="view" class="pc-view"></div>
+        </section>
       </main>
     </div>
+    <p id="toast" class="pc-toast hidden" data-tone="ok" role="status" aria-live="polite"></p>
     <script type="module" src="options.js"></script>
   </body>
 </html>

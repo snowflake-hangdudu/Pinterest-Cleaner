@@ -3,81 +3,103 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pinterest Cleaner</title>
+    <title data-i18n="brandTitle">Pinterest Cleaner</title>
+    <link rel="stylesheet" href="../ui/tokens.css">
+    <link rel="stylesheet" href="../ui/components.css">
+    <link rel="stylesheet" href="../ui/ambient.css">
     <link rel="stylesheet" href="popup.css">
   </head>
-  <body>
-    <main class="popup">
-      <header class="brand">
-        <img class="brand__icon" src="../../icons/icon48.png" alt="">
-        <div class="brand__copy">
-          <p class="brand__name" data-i18n="brandTitle">Pinterest Cleaner</p>
-          <p class="brand__product" data-i18n="brandProduct">AI Filter &amp; Ad Blocker</p>
+  <body class="btu-root">
+    <main class="btu-app-shell btu-surface">
+      <header class="btu-header btu-app-header">
+        <img class="btu-brand-mark" src="../../icons/icon32.png" alt="" width="32" height="32">
+        <div class="btu-header__copy">
+          <span class="btu-header__title">
+            <span class="pc-ext-name" data-i18n="brandTitle">Pinterest Cleaner</span>
+            <span class="btu-chip">v1.0.0</span>
+          </span>
+          <p class="btu-header__desc" data-i18n="brandProduct">Ad Blocker &amp; Content Filters</p>
         </div>
-        <label class="power" title="ON/OFF">
-          <input id="enabled" type="checkbox" role="switch" checked>
-          <span class="power__dot" aria-hidden="true"></span>
-        </label>
+        <div class="pc-header-actions">
+          <button id="open-settings" class="btu-icon-btn is-active" type="button" data-i18n-aria="openSettings" data-i18n-title="openSettings" aria-label="Settings" title="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94L14.4 2.81a.49.49 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41L9.25 5.35c-.59.24-1.13.56-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
+          </button>
+          <button id="back-feature" class="btu-icon-btn" type="button" data-i18n-aria="back" data-i18n-title="back" aria-label="Back" title="Back" inert>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.2 4.8 8.05 12l7.15 7.2-1.7 1.7L4.65 12 13.5 3.1l1.7 1.7Z"/></svg>
+          </button>
+        </div>
       </header>
 
-      <section class="stats" aria-live="polite">
-        <div class="stats__head">
-          <span data-i18n="todayCleaned">Cleaned today</span>
-          <strong id="stat-total">0</strong>
-        </div>
-        <div class="stats__grid">
-          <div><span data-i18n="ai">AI content</span><b id="stat-ai">0</b></div>
-          <div><span data-i18n="ads">Promoted</span><b id="stat-ad">0</b></div>
-          <div><span data-i18n="keywords">Keywords</span><b id="stat-keyword">0</b></div>
-          <div><span data-i18n="creators">Creators</span><b id="stat-creator">0</b></div>
-        </div>
-      </section>
+      <div class="pc-pages">
+        <section id="feature-panel" class="btu-app-content pc-page is-active">
+          <div class="btu-toggle-row">
+            <span id="power-dot" class="btu-status-dot is-on" aria-hidden="true"></span>
+            <span>
+              <span class="btu-toggle-row__title" data-i18n="enabled">Enable extension</span>
+            </span>
+            <button id="enabled" class="btu-switch on" type="button" role="switch" aria-checked="true" data-i18n-aria="enabled" aria-label="Enable extension"></button>
+          </div>
 
-      <section class="board">
-        <label class="setting" for="ai-enabled">
-          <span class="setting__copy">
-            <span class="setting__name" data-i18n="aiFilter">AI filter</span>
-            <span class="setting__detail" id="ai-mode-label" data-i18n="aiStandard">Standard</span>
-          </span>
-          <input class="switch" id="ai-enabled" type="checkbox" role="switch" checked>
-        </label>
+          <section class="pc-card">
+            <div class="btu-setting-row">
+              <span class="btu-setting-copy">
+                <strong data-i18n="adFilter">Ads &amp; promoted</strong>
+              </span>
+              <button id="ads-enabled" class="btu-switch on" type="button" role="switch" aria-checked="true" data-i18n-aria="adFilter"></button>
+            </div>
+            <div class="btu-setting-row">
+              <span class="btu-setting-copy">
+                <strong data-i18n="hideVideo">Hide video pins</strong>
+              </span>
+              <button id="hide-video" class="btu-switch" type="button" role="switch" aria-checked="false" data-i18n-aria="hideVideo"></button>
+            </div>
+            <div class="btu-setting-row">
+              <span class="btu-setting-copy">
+                <strong data-i18n="showFiltered">Show filtered content</strong>
+                <small data-i18n="showFilteredHelp">Preview with an outline; switching refreshes Pinterest to restore filtered data</small>
+              </span>
+              <button id="show-filtered" class="btu-switch" type="button" role="switch" aria-checked="false" data-i18n-aria="showFiltered"></button>
+            </div>
+          </section>
 
-        <label class="setting" for="ads-enabled">
-          <span class="setting__copy">
-            <span class="setting__name" data-i18n="adFilter">Ads &amp; promoted</span>
-          </span>
-          <input class="switch" id="ads-enabled" type="checkbox" role="switch" checked>
-        </label>
+          <section class="pc-card pc-card--pages">
+            <div class="pc-pages-row">
+              <span class="pc-card-label" data-i18n="filterPages">Filter pages</span>
+              <div id="filter-pages" class="pc-page-chips" role="group" data-i18n-aria="filterPages" aria-label="Filter pages">
+                <button type="button" class="pc-page-chip is-on" data-page="home" data-i18n="filterPageHome" aria-pressed="true">Home</button>
+                <button type="button" class="pc-page-chip is-on" data-page="search" data-i18n="filterPageSearch" aria-pressed="true">Search</button>
+                <button type="button" class="pc-page-chip is-on" data-page="detail" data-i18n="filterPageDetail" aria-pressed="true">Pin detail</button>
+              </div>
+            </div>
+          </section>
+        </section>
 
-        <button id="open-rules" class="nav-row" type="button">
-          <span data-i18n="customRules">Custom rules</span>
-          <span id="rules-count" class="nav-row__meta">0</span>
-        </button>
-        <button id="open-page-cleaner" class="nav-row" type="button">
-          <span data-i18n="pageCleaner">Page cleaner</span>
-          <span class="nav-row__chevron" aria-hidden="true">›</span>
-        </button>
-      </section>
+        <section id="settings-panel" class="btu-app-content pc-page" inert>
+          <label class="btu-setting-row" for="language-select">
+            <span class="btu-setting-copy">
+              <strong data-i18n="language">Language</strong>
+              <small data-i18n="languageHelp">Choose the extension interface language</small>
+            </span>
+            <select id="language-select" class="btu-select" data-i18n-aria="language">
+              <option value="en">English</option>
+              <option value="zh-CN">简体中文</option>
+              <option value="zh-TW">繁體中文</option>
+            </select>
+          </label>
+          <div class="dm-theme-block">
+            <div class="dm-theme-copy">
+              <strong data-i18n="theme">Theme</strong>
+            </div>
+            <div id="theme-picker" class="dm-theme-grid" role="radiogroup" data-i18n-aria="theme" aria-label="Theme"></div>
+          </div>
+          <p id="theme-status" class="btu-status btu-status-message hidden" data-tone="info" role="status" aria-live="polite"></p>
+          <p class="pc-feedback"><span data-i18n="feedback">Feedback</span>：<a href="mailto:hangdudu0@agent.qq.com">hangdudu0@agent.qq.com</a></p>
+        </section>
+      </div>
 
-      <section class="actions">
-        <label class="setting" for="show-filtered">
-          <span class="setting__copy">
-            <span class="setting__name" data-i18n="showFiltered">Show filtered content</span>
-          </span>
-          <input class="switch" id="show-filtered" type="checkbox" role="switch">
-        </label>
-        <div class="pause-row">
-          <button id="pause-5" type="button" data-i18n="pause5">Pause 5 min</button>
-          <button id="pause-30" type="button" data-i18n="pause30">Pause 30 min</button>
-          <button id="pause-off" type="button" data-i18n="pauseOff">Resume</button>
-        </div>
-      </section>
-
-      <footer class="footer">
-        <button id="open-options" type="button" data-i18n="options">Open settings</button>
-        <p data-i18n="privacyNote">Local only · no account · no upload</p>
+      <footer class="btu-app-footer">
+        <button id="open-full-settings" class="btu-link-button" type="button" data-i18n="openFullSettings">Open full settings</button>
       </footer>
-      <p id="status" class="sr-only" role="status"></p>
     </main>
     <script type="module" src="popup.js"></script>
   </body>

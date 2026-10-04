@@ -1,0 +1,441 @@
+/* Ambient theme shell. Colors come from themes-ambient-full.json via theme.js. */
+
+:root {
+  --theme-background: #090a0d;
+  --theme-surface: rgba(18, 20, 24, 0.8);
+  --theme-surface-hover: rgba(24, 27, 32, 0.86);
+  --theme-surface-strong: rgba(30, 34, 40, 0.9);
+  --theme-border: rgba(176, 186, 198, 0.14);
+  --theme-border-soft: rgba(255, 255, 255, 0.07);
+  --theme-text-primary: #f4f5f7;
+  --theme-text-secondary: #c8cdd3;
+  --theme-text-muted: #858d97;
+  --theme-primary: #8b96a4;
+  --theme-primary-strong: #707a86;
+  --theme-primary-hover: #a1aab5;
+  --theme-primary-soft: rgba(134, 148, 166, 0.14);
+  --theme-primary-border: rgba(158, 170, 186, 0.25);
+  --theme-accent: #a7b0ba;
+  --theme-accent-secondary: #66717d;
+  --theme-gradient-background: radial-gradient(circle at 84% 14%, rgba(108, 122, 140, 0.12) 0%, rgba(71, 82, 96, 0.04) 34%, transparent 58%), radial-gradient(circle at 12% 88%, rgba(255, 255, 255, 0.025) 0%, transparent 38%);
+  --theme-gradient-button: linear-gradient(180deg, #8e99a7 0%, #697581 100%);
+  --theme-gradient-preview: none;
+  --theme-gradient-header: linear-gradient(90deg, rgba(145, 157, 172, 0.055), transparent 58%);
+  --theme-surface-blur: 14px;
+  --theme-header-blur: 16px;
+  --theme-noise-opacity: 0.032;
+  --theme-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+  --accent: #8b96a4;
+  --accent-hover: #a1aab5;
+  --accent-soft: rgba(134, 148, 166, 0.14);
+  --accent-ring: rgba(139, 150, 164, 0.28);
+  --selected-bg: rgba(139, 150, 164, 0.14);
+  --selected-border: #8b96a4;
+  --selected-text: #ffffff;
+  --selected-dot: #a1aab5;
+  --control-bg: rgba(30, 34, 40, 0.9);
+  --control-border: rgba(176, 186, 198, 0.14);
+  --control-text: #c8cdd3;
+  /*
+   * Theme picker only: high-contrast dual ring, never theme accent.
+   * Interactive controls (chips, switches, focus) use --accent / --selected-*.
+   */
+  --pc-select-ring-light: rgba(255, 255, 255, 0.92);
+  --pc-select-ring-dark: rgba(0, 0, 0, 0.7);
+  --pc-select-badge-bg: rgba(10, 15, 20, 0.88);
+  --pc-select-badge-fg: #ffffff;
+  --pc-select-badge-ring: rgba(255, 255, 255, 0.55);
+  color-scheme: dark;
+}
+
+:root[data-theme-mode="dark"] { color-scheme: dark; }
+:root[data-theme-mode="light"] { color-scheme: light; }
+
+html,
+body {
+  margin: 0;
+  background: transparent;
+  color: var(--theme-text-primary);
+  accent-color: var(--accent);
+}
+
+.btu-app-shell {
+  position: relative;
+  isolation: isolate;
+  color: var(--theme-text-primary);
+  background-color: var(--theme-background);
+  background-image: none;
+}
+
+.btu-app-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--theme-gradient-background);
+  background-repeat: no-repeat;
+  background-size: cover;
+  pointer-events: none;
+}
+
+.btu-app-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--theme-noise-opacity);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.55) 0.6px, transparent 0.6px);
+  background-size: 3px 3px;
+}
+
+.btu-app-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.btu-app-shell.btu-surface {
+  border-color: var(--theme-border-soft);
+  box-shadow: none;
+}
+
+body.btu-root {
+  padding: 0;
+  background: var(--theme-background);
+}
+
+.btu-app-content,
+.btu-settings-body {
+  background: transparent;
+}
+
+.btu-app-header {
+  background: color-mix(in srgb, var(--theme-background) 72%, transparent);
+  border-bottom: 1px solid var(--theme-border-soft);
+}
+
+.btu-app-header::after {
+  display: none;
+}
+
+.btu-app-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--theme-gradient-header);
+  pointer-events: none;
+}
+
+.btu-app-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+.btu-app-header .btu-brand-mark {
+  background: transparent;
+  object-fit: cover;
+  border-radius: 8px;
+  filter: none;
+}
+
+.btu-header__title,
+.btu-view-title,
+.btu-setting-copy strong,
+.btu-toggle-row__title {
+  color: var(--theme-text-primary);
+}
+
+.btu-chip {
+  color: var(--theme-text-muted);
+  background: var(--theme-surface-strong);
+  border: 1px solid var(--theme-border-soft);
+}
+
+.btu-header__desc,
+.btu-setting-copy small,
+.btu-toggle-row__meta {
+  color: var(--theme-text-secondary);
+}
+
+.btu-app-footer {
+  background: color-mix(in srgb, var(--theme-background) 78%, transparent);
+  border-top: 1px solid var(--theme-border-soft);
+}
+
+.btu-link-button {
+  color: var(--theme-text-muted);
+}
+
+.btu-link-button:hover {
+  color: var(--theme-text-secondary);
+}
+
+.btu-icon-btn {
+  color: var(--theme-text-secondary);
+  background: var(--theme-surface-strong);
+  border: 1px solid var(--theme-border-soft);
+}
+
+.btu-icon-btn:hover {
+  color: var(--theme-text-primary);
+  background: var(--theme-surface-hover);
+}
+
+.btu-select,
+.dm-inline input,
+.dm-inline select,
+.dm-site select,
+select.select {
+  color: var(--theme-text-primary);
+  background-color: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+}
+
+.btu-select,
+select.select {
+  box-sizing: border-box;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 30px 0 12px;
+  border-radius: 8px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23c8cdd3' d='M4.2 6.2 8 10l3.8-3.8-1.1-1.1L8 7.8 5.3 5.1z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px 14px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 34px;
+  cursor: pointer;
+}
+
+.btu-select:focus,
+.dm-inline input:focus,
+.dm-inline select:focus,
+select.select:focus {
+  outline: none;
+  border-color: var(--selected-border);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.btu-btn--primary {
+  color: #fff;
+  background-color: transparent;
+  background-image: var(--theme-gradient-button);
+  border: 1px solid var(--theme-primary-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.btu-btn--primary:hover:not(:disabled) {
+  background-color: transparent;
+  background-image: var(--theme-gradient-button);
+  filter: brightness(1.05);
+}
+
+.btu-btn--primary:active:not(:disabled) {
+  transform: translateY(1px);
+  filter: brightness(0.98);
+}
+
+.btu-btn--secondary {
+  color: var(--theme-text-primary);
+  background: var(--theme-surface);
+  border-color: var(--theme-border);
+}
+
+.btu-btn--secondary:hover:not(:disabled) {
+  background: var(--theme-surface-hover);
+}
+
+.btu-root .btu-switch {
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+}
+
+.btu-root .btu-switch.on {
+  background: var(--accent);
+  border-color: transparent;
+}
+
+.btu-setting-row {
+  border-bottom-color: var(--theme-border-soft);
+}
+
+.dm-theme-block {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+
+.dm-theme-copy strong,
+.dm-theme-copy small {
+  display: block;
+}
+
+.dm-theme-copy strong {
+  color: var(--theme-text-primary);
+  font-size: 12px;
+}
+
+.dm-theme-copy small {
+  display: none;
+}
+
+.dm-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 6px 6px 2px 0;
+  margin: -6px -6px 0 0;
+  overflow: visible;
+}
+
+.dm-theme-card {
+  position: relative;
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  padding: 6px 6px 8px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 10px;
+  background: var(--theme-surface);
+  color: var(--theme-text-secondary);
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.dm-theme-card:hover {
+  background: var(--theme-surface-hover);
+}
+
+/* Selection must stay theme-neutral so every ambient theme remains readable. */
+.dm-theme-card[aria-checked="true"] {
+  color: var(--theme-text-primary);
+  font-weight: 600;
+  border-color: transparent;
+  box-shadow:
+    0 0 0 2px var(--pc-select-ring-light),
+    0 0 0 3px var(--pc-select-ring-dark);
+}
+
+.dm-theme-card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.28);
+}
+
+.dm-theme-card[aria-checked="true"]:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--pc-select-ring-light),
+    0 0 0 3px var(--pc-select-ring-dark),
+    0 0 0 6px rgba(255, 255, 255, 0.2);
+}
+
+.dm-theme-card__swatch {
+  display: block;
+  height: 36px;
+  border-radius: 6px;
+  background-color: var(--theme-background);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+}
+
+.dm-theme-card__name {
+  display: block;
+  overflow: hidden;
+  padding: 0 2px;
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Badge sits on the card corner, never inside the swatch. */
+.dm-theme-card__check {
+  display: none;
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--pc-select-badge-bg);
+  color: var(--pc-select-badge-fg);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px var(--pc-select-badge-ring);
+}
+
+.dm-theme-card[aria-checked="true"] .dm-theme-card__check {
+  display: grid;
+}
+
+/* Filter chips consume theme semantic tokens, not the theme-picker rings. */
+.pc-page-chips {
+  overflow: visible;
+}
+
+.pc-page-chip {
+  position: relative;
+  height: 30px;
+  min-width: 0;
+  padding: 0 14px 0 10px;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.pc-page-chip:hover {
+  background: color-mix(in srgb, var(--selected-bg) 65%, var(--control-bg));
+  border-color: color-mix(in srgb, var(--selected-border) 42%, var(--control-border));
+  color: var(--theme-text-primary);
+}
+
+.pc-page-chip.is-on {
+  color: var(--selected-text);
+  font-weight: 600;
+  border-color: var(--selected-border);
+  background: var(--selected-bg);
+  box-shadow: none;
+}
+
+.pc-page-chip.is-on::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--selected-dot);
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.pc-page-chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.pc-page-chip.is-on:focus-visible {
+  border-color: var(--selected-border);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}

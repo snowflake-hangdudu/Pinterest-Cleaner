@@ -5,108 +5,132 @@ import {
   clearSettings,
   createId,
   exportBackup,
-  importBackup,
-  DEFAULT_SETTINGS
+  importBackup
 } from '../storage/settings.js';
-import { resolveLanguage } from '../shared/i18n.js';
+import { applyTranslations, languageOptionLabelKey, resolveLanguage, themeDisplayName, translate } from '../shared/i18n.js';
+import {
+  applyTheme,
+  loadThemeDefinitions,
+  renderThemePicker,
+  resolveTheme,
+  syncThemePicker
+} from '../ui/theme.js';
 
 const EXT = globalThis.browser ?? globalThis.chrome;
 const view = document.getElementById('view');
-const nav = document.getElementById('nav');
 const viewTitle = document.getElementById('view-title');
-const viewDesc = document.getElementById('view-desc');
-const saveStatus = document.getElementById('save-status');
-const sidebarSub = document.getElementById('sidebar-sub');
+const toastEl = document.getElementById('toast');
+const themePicker = document.getElementById('theme-picker');
+const languageSelect = document.getElementById('language-select');
+const homePanel = document.getElementById('home-panel');
+const detailPanel = document.getElementById('detail-panel');
 
-const COPY = {
-  en: {
-    settings: 'Settings',
-    overview: 'Overview',
-    overviewDesc: 'Quick status and common switches',
-    ai: 'AI filter',
-    aiDesc: 'Strict / Standard / Aggressive detection modes',
-    ads: 'Ad filter',
-    adsDesc: 'Promoted, sponsored and shopping ads',
-    keywords: 'Keyword filter',
-    keywordsDesc: 'AND / OR / exact / contains / regex rules',
-    creators: 'Creator filter',
-    creatorsDesc: 'Local creator blocklist',
-    domains: 'Source filter',
-    domainsDesc: 'Hide pins by outbound domain',
-    types: 'Content type',
-    typesDesc: 'Video, GIF, shopping and idea pins',
-    page: 'Page cleaner',
-    pageDesc: 'Independent module cleanup switches',
-    whitelist: 'Whitelist',
-    whitelistDesc: 'Highest priority allow rules',
-    stats: 'Stats',
-    statsDesc: 'Local daily counters only',
-    data: 'Data',
-    dataDesc: 'Import, export and reset',
-    advanced: 'Advanced',
-    advancedDesc: 'Diagnostics, safe mode and logs',
-    about: 'About',
-    aboutDesc: 'Privacy and product boundary',
-    saved: 'Saved',
-    saving: 'Saving…',
-    failed: 'Save failed'
-  },
-  'zh-CN': {
-    settings: '设置',
-    overview: '概览',
-    overviewDesc: '状态总览与常用开关',
-    ai: 'AI 过滤',
-    aiDesc: '严格 / 标准 / 强力检测模式',
-    ads: '广告过滤',
-    adsDesc: '推广、赞助与购物广告',
-    keywords: '关键词过滤',
-    keywordsDesc: 'AND / OR / 精确 / 包含 / 正则规则',
-    creators: '发布者过滤',
-    creatorsDesc: '本地发布者黑名单',
-    domains: '来源过滤',
-    domainsDesc: '按外链域名隐藏 Pin',
-    types: '内容类型',
-    typesDesc: '视频、动图、购物与 Idea Pin',
-    page: '页面净化',
-    pageDesc: '模块级独立净化开关',
-    whitelist: '白名单',
-    whitelistDesc: '最高优先级放行规则',
-    stats: '统计',
-    statsDesc: '仅本地当日计数',
-    data: '数据管理',
-    dataDesc: '导入、导出与重置',
-    advanced: '高级设置',
-    advancedDesc: '诊断、安全模式与日志',
-    about: '关于',
-    aboutDesc: '隐私与产品边界',
-    saved: '已保存',
-    saving: '保存中…',
-    failed: '保存失败'
-  }
-};
-
-const SECTIONS = [
-  ['overview', 'overview', 'overviewDesc'],
-  ['ai', 'ai', 'aiDesc'],
-  ['ads', 'ads', 'adsDesc'],
-  ['keywords', 'keywords', 'keywordsDesc'],
-  ['creators', 'creators', 'creatorsDesc'],
-  ['domains', 'domains', 'domainsDesc'],
-  ['types', 'types', 'typesDesc'],
-  ['page', 'page', 'pageDesc'],
-  ['whitelist', 'whitelist', 'whitelistDesc'],
-  ['stats', 'stats', 'statsDesc'],
-  ['data', 'data', 'dataDesc'],
-  ['advanced', 'advanced', 'advancedDesc'],
-  ['about', 'about', 'aboutDesc']
+const FILTER_SECTIONS = [
+  ['keywords', 'navKeywords'],
+  ['creators', 'navCreators'],
+  ['domains', 'navDomains'],
+  ['types', 'navTypes']
 ];
+
+const OPEN_SECTION_KEY = 'pc.options.openSection';
 
 let settings = null;
 let language = 'en';
-let current = (location.hash || '#overview').replace('#', '') || 'overview';
+let themes = [];
+let toastTimer;
 
-function t(key) {
-  return COPY[language]?.[key] || COPY.en[key] || key;
+function isFilterSection(id) {
+  return FILTER_SECTIONS.some((item) => item[0] === id);
+}
+
+function sectionFromHash() {
+  const id = (location.hash || '').replace(/^#/, '');
+  return isFilterSection(id) ? id : 'home';
+}
+
+function showSection(id) {
+  current = isFilterSection(id) ? id : 'home';
+  const nextHash = current === 'home' ? '' : current;
+  if (location.hash.replace(/^#/, '') !== nextHash) {
+    location.hash = nextHash;
+  }
+  if (settings) renderLayout();
+}
+
+async function consumeOpenSection() {
+  const data = await EXT.storage.local.get(OPEN_SECTION_KEY);
+  const section = data?.[OPEN_SECTION_KEY];
+  if (!section) return false;
+  await EXT.storage.local.remove(OPEN_SECTION_KEY);
+  showSection(section);
+  return true;
+}
+
+let current = sectionFromHash();
+
+function t(key, vars) {
+  return translate(language, key, vars);
+}
+
+function themeLabel(id, fallback) {
+  return themeDisplayName(id, language, fallback);
+}
+
+function confirmDialog({ title, message, confirmLabel, danger = false }) {
+  return new Promise((resolve) => {
+    const previous = document.activeElement;
+    const backdrop = el('div', 'pc-dialog-backdrop');
+    const dialog = el('div', 'pc-dialog');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    const heading = el('h3', 'pc-dialog__title', title);
+    heading.id = 'pc-dialog-title';
+    dialog.setAttribute('aria-labelledby', heading.id);
+    const body = el('p', 'pc-dialog__body', message);
+    const actions = el('div', 'pc-dialog__actions');
+    const cancel = el('button', 'btu-btn btu-btn--secondary', t('cancel'));
+    const ok = el('button', `btu-btn ${danger ? 'btu-btn--danger' : 'btu-btn--primary'}`, confirmLabel || t('confirmAction'));
+    cancel.type = ok.type = 'button';
+
+    const close = (result) => {
+      document.removeEventListener('keydown', onKey);
+      backdrop.remove();
+      if (previous instanceof HTMLElement) previous.focus();
+      resolve(result);
+    };
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close(false);
+      }
+    };
+
+    cancel.addEventListener('click', () => close(false));
+    ok.addEventListener('click', () => close(true));
+    backdrop.addEventListener('click', (event) => {
+      if (event.target === backdrop) close(false);
+    });
+    document.addEventListener('keydown', onKey);
+    actions.append(cancel, ok);
+    dialog.append(heading, body, actions);
+    backdrop.append(dialog);
+    document.body.append(backdrop);
+    ok.focus();
+  });
+}
+
+function toast(message, tone = 'ok') {
+  if (!toastEl || !message) return;
+  toastEl.textContent = message;
+  toastEl.dataset.tone = tone;
+  toastEl.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.add('hidden'), tone === 'error' ? 2800 : 1800);
+}
+
+function paintTheme(themeId) {
+  applyTheme(document.body, themeId, themes);
+  syncThemePicker(themePicker, themes, themeId, themeLabel);
 }
 
 function el(tag, className, text) {
@@ -117,11 +141,11 @@ function el(tag, className, text) {
 }
 
 function card() {
-  return el('section', 'card');
+  return el('section', 'dm-block');
 }
 
-function row(title, help, control) {
-  const wrap = el('label', 'setting-row');
+function row(title, help, control, { tag = 'label' } = {}) {
+  const wrap = el(tag, 'setting-row');
   const copy = el('span', 'setting-copy');
   copy.append(el('strong', null, title), el('small', null, help));
   wrap.append(copy, control);
@@ -129,16 +153,21 @@ function row(title, help, control) {
 }
 
 function switchInput(checked, onChange) {
-  const input = el('input', 'switch');
-  input.type = 'checkbox';
-  input.role = 'switch';
-  input.checked = checked;
-  input.addEventListener('change', () => onChange(input.checked));
-  return input;
+  const button = el('button', `btu-switch${checked ? ' on' : ''}`);
+  button.type = 'button';
+  button.setAttribute('role', 'switch');
+  button.setAttribute('aria-checked', String(checked));
+  button.addEventListener('click', () => {
+    const next = button.getAttribute('aria-checked') !== 'true';
+    button.classList.toggle('on', next);
+    button.setAttribute('aria-checked', String(next));
+    onChange(next);
+  });
+  return button;
 }
 
 function selectInput(value, options, onChange) {
-  const select = el('select', 'select');
+  const select = el('select', 'btu-select');
   for (const [val, label] of options) {
     const opt = el('option', null, label);
     opt.value = val;
@@ -150,265 +179,86 @@ function selectInput(value, options, onChange) {
 }
 
 async function persist(patch) {
-  saveStatus.textContent = t('saving');
   try {
     settings = await saveSettings(patch);
     language = resolveLanguage(settings.language);
-    saveStatus.textContent = t('saved');
-    renderNav();
-    renderView();
+    applyTranslations(document, language);
+    syncChromeLangControls();
+    paintTheme(settings.theme);
+    toast(`✓ ${t('saved')}`, 'ok');
+    if (current === 'home') renderFilterPages();
+    else renderLayout();
   } catch {
-    saveStatus.textContent = t('failed');
+    toast(t('failed'), 'error');
   }
 }
 
-function renderNav() {
-  nav.textContent = '';
-  sidebarSub.textContent = t('settings');
-  for (const [id, titleKey] of SECTIONS) {
-    const button = el('button', current === id ? 'active' : '', t(titleKey));
+function syncChromeLangControls() {
+  for (const option of languageSelect.options) {
+    option.textContent = t(languageOptionLabelKey(option.value));
+  }
+  languageSelect.value = resolveLanguage(settings.language);
+}
+
+function renderFilterPages() {
+  const root = document.getElementById('filter-pages');
+  if (!root || !settings) return;
+  const cfg = settings.filterPages || {};
+  root.className = 'pc-page-chips';
+  root.setAttribute('role', 'group');
+  root.setAttribute('aria-label', t('filterPages'));
+  root.textContent = '';
+  for (const [key, labelKey] of [
+    ['home', 'filterPageHome'],
+    ['search', 'filterPageSearch'],
+    ['detail', 'filterPageDetail']
+  ]) {
+    const on = cfg[key] !== false;
+    const button = el('button', `pc-page-chip${on ? ' is-on' : ''}`, t(labelKey));
     button.type = 'button';
+    button.dataset.page = key;
+    button.setAttribute('aria-pressed', String(on));
     button.addEventListener('click', () => {
-      current = id;
-      location.hash = id;
-      renderNav();
-      renderView();
-    });
-    nav.append(button);
-  }
-}
-
-function renderOverview(root) {
-  const box = card();
-  box.append(
-    row(language === 'zh-CN' ? '启用扩展' : 'Enable extension', language === 'zh-CN' ? '关闭后不做任何过滤' : 'Turn off all filtering', switchInput(settings.enabled, (enabled) => persist({ enabled }))),
-    row(language === 'zh-CN' ? '显示被过滤内容' : 'Show filtered content', language === 'zh-CN' ? '虚线描边预览，不刷新页面' : 'Preview with outline, no reload', switchInput(settings.showFiltered, (showFiltered) => persist({ showFiltered }))),
-    row(language === 'zh-CN' ? '语言' : 'Language', language === 'zh-CN' ? '英文为默认语言' : 'English is the default language', selectInput(settings.language, [['en', 'English'], ['zh-CN', '简体中文'], ['auto', language === 'zh-CN' ? '跟随浏览器' : 'Follow browser']], (value) => persist({ language: value })))
-  );
-  root.append(box);
-
-  const stats = card();
-  stats.append(el('h2', null, language === 'zh-CN' ? '今日统计' : 'Today'));
-  const grid = el('div', 'stats-grid');
-  for (const [key, label] of [['total', 'Total'], ['ai', 'AI'], ['ad', 'Ads'], ['keyword', 'Keywords']]) {
-    const item = el('div', 'stat', null);
-    item.append(el('span', null, label), el('b', null, String(settings.stats?.[key] || 0)));
-    grid.append(item);
-  }
-  stats.append(grid);
-  root.append(stats);
-}
-
-function renderAi(root) {
-  const box = card();
-  box.append(
-    row(language === 'zh-CN' ? '启用 AI 过滤' : 'Enable AI filter', language === 'zh-CN' ? '本地信号检测，不上传图片' : 'Local signals only, no image upload', switchInput(settings.ai.enabled, (enabled) => persist({ ai: { ...settings.ai, enabled } }))),
-    row(language === 'zh-CN' ? '模式' : 'Mode', language === 'zh-CN' ? '严格误杀最低；强力召回更高' : 'Strict is safest; Aggressive recalls more', selectInput(settings.ai.mode, [
-      ['strict', language === 'zh-CN' ? '严格' : 'Strict'],
-      ['standard', language === 'zh-CN' ? '标准（默认）' : 'Standard (default)'],
-      ['aggressive', language === 'zh-CN' ? '强力' : 'Aggressive']
-    ], (mode) => persist({ ai: { ...settings.ai, mode } })))
-  );
-  if (settings.ai.mode === 'aggressive') {
-    box.append(el('p', 'hint', language === 'zh-CN' ? '强力模式可能隐藏部分非 AI 内容。' : 'Aggressive mode may hide some non-AI content.'));
-  }
-  root.append(box);
-}
-
-function renderAds(root) {
-  const box = card();
-  const ads = settings.ads;
-  const fields = [
-    ['enabled', language === 'zh-CN' ? '启用广告过滤' : 'Enable ad filter'],
-    ['promoted', 'Promoted'],
-    ['sponsored', 'Sponsored'],
-    ['shoppingAds', language === 'zh-CN' ? '购物广告' : 'Shopping ads'],
-    ['feedPromoted', language === 'zh-CN' ? '信息流推广' : 'Feed promoted'],
-    ['searchPromoted', language === 'zh-CN' ? '搜索推广' : 'Search promoted'],
-    ['detailPromoted', language === 'zh-CN' ? '详情页推广' : 'Pin detail promoted']
-  ];
-  for (const [key, label] of fields) {
-    box.append(row(label, '', switchInput(Boolean(ads[key]), (value) => persist({ ads: { ...ads, [key]: value } }))));
-  }
-  root.append(box);
-}
-
-function ruleEditor(kind) {
-  const box = card();
-  const toolbar = el('div', 'toolbar');
-  const addBtn = el('button', 'btn btn-primary', language === 'zh-CN' ? '新增规则' : 'Add rule');
-  addBtn.type = 'button';
-  toolbar.append(addBtn);
-  box.append(toolbar);
-  const list = el('div', 'rule-list');
-  box.append(list);
-
-  const refresh = () => {
-    list.textContent = '';
-    const rules = settings[kind] || [];
-    if (!rules.length) {
-      list.append(el('p', 'muted', language === 'zh-CN' ? '暂无规则' : 'No rules yet'));
-      return;
-    }
-    for (const rule of rules) {
-      const item = el('article', 'rule-item');
-      const body = el('div');
-      if (kind === 'keywordRules') {
-        body.append(
-          el('h3', null, rule.name || 'Keyword'),
-          el('p', null, `${rule.operator} · ${rule.matchType}\n${(rule.keywords || []).join(', ')}`)
-        );
-      } else if (kind === 'creatorRules') {
-        body.append(
-          el('h3', null, rule.username ? `@${rule.username}` : rule.displayName || 'Creator'),
-          el('p', null, rule.note || '')
-        );
-      } else if (kind === 'domainRules') {
-        body.append(
-          el('h3', null, rule.pattern || 'Domain'),
-          el('p', null, rule.matchType)
-        );
-      } else {
-        body.append(
-          el('h3', null, `${rule.type}: ${rule.value}`),
-          el('p', null, rule.note || '')
-        );
+      const next = { ...settings.filterPages };
+      const turningOn = next[key] === false;
+      if (!turningOn) {
+        const othersOn = ['home', 'search', 'detail'].some((item) => item !== key && next[item] !== false);
+        if (!othersOn) return;
       }
-      const actions = el('div', 'rule-actions');
-      const toggle = switchInput(rule.enabled, async (enabled) => {
-        const next = settings[kind].map((item) => item.id === rule.id ? { ...item, enabled } : item);
-        await persist({ [kind]: next });
-      });
-      const remove = el('button', 'btn btn-danger', language === 'zh-CN' ? '删除' : 'Delete');
-      remove.type = 'button';
-      remove.addEventListener('click', async () => {
-        await persist({ [kind]: settings[kind].filter((item) => item.id !== rule.id) });
-      });
-      actions.append(toggle, remove);
-      item.append(body, actions);
-      list.append(item);
-    }
-  };
-
-  addBtn.addEventListener('click', async () => {
-    if (kind === 'keywordRules') {
-      const name = prompt(language === 'zh-CN' ? '规则名称' : 'Rule name', 'New keyword rule');
-      if (!name) return;
-      const keywords = prompt(language === 'zh-CN' ? '关键词（逗号分隔）' : 'Keywords (comma separated)');
-      if (!keywords) return;
-      const operator = confirm(language === 'zh-CN' ? '使用 AND 逻辑？取消=OR' : 'Use AND logic? Cancel = OR') ? 'AND' : 'OR';
-      await persist({
-        keywordRules: [...settings.keywordRules, {
-          id: createId('kw'),
-          enabled: true,
-          name,
-          operator,
-          keywords: keywords.split(/[,，]/).map((s) => s.trim()).filter(Boolean),
-          fields: ['title', 'description', 'alt', 'creator'],
-          matchType: 'contains',
-          caseSensitive: false,
-          note: ''
-        }]
-      });
-      return;
-    }
-    if (kind === 'creatorRules') {
-      const username = prompt(language === 'zh-CN' ? '发布者用户名（不含 @）' : 'Creator username (without @)');
-      if (!username) return;
-      await persist({
-        creatorRules: [...settings.creatorRules, {
-          id: createId('cr'), enabled: true, username: username.replace(/^@/, ''), displayName: '', creatorId: '', note: ''
-        }]
-      });
-      return;
-    }
-    if (kind === 'domainRules') {
-      const pattern = prompt(language === 'zh-CN' ? '域名，如 example.com' : 'Domain, e.g. example.com');
-      if (!pattern) return;
-      await persist({
-        domainRules: [...settings.domainRules, {
-          id: createId('dm'), enabled: true, pattern: pattern.trim().toLowerCase(), matchType: 'subdomain', note: ''
-        }]
-      });
-      return;
-    }
-    const type = prompt(language === 'zh-CN' ? '类型：creator / domain / keyword' : 'Type: creator / domain / keyword', 'keyword');
-    const value = prompt(language === 'zh-CN' ? '值' : 'Value');
-    if (!type || !value) return;
-    await persist({
-      whitelistRules: [...settings.whitelistRules, {
-        id: createId('wl'), enabled: true, type, value, note: ''
-      }]
+      next[key] = turningOn;
+      persist({ filterPages: next });
     });
-  });
-
-  refresh();
-  return box;
-}
-
-function renderTypes(root) {
-  const box = card();
-  const cfg = settings.contentTypes;
-  const fields = [
-    ['hideVideo', language === 'zh-CN' ? '隐藏视频 Pin' : 'Hide video pins'],
-    ['hideGif', language === 'zh-CN' ? '隐藏 GIF / 动图' : 'Hide GIF / animated'],
-    ['hideShopping', language === 'zh-CN' ? '隐藏购物 Pin' : 'Hide shopping pins'],
-    ['hideIdeaPin', language === 'zh-CN' ? '隐藏 Idea Pins' : 'Hide Idea Pins']
-  ];
-  for (const [key, label] of fields) {
-    box.append(row(label, '', switchInput(Boolean(cfg[key]), (value) => persist({ contentTypes: { ...cfg, [key]: value } }))));
+    root.append(button);
   }
-  root.append(box);
 }
 
-function renderPage(root) {
-  const box = card();
-  const cfg = settings.pageCleaner;
-  const fields = [
-    ['hidePromoModules', language === 'zh-CN' ? '隐藏推广模块' : 'Hide promo modules'],
-    ['hideShoppingRecs', language === 'zh-CN' ? '隐藏购物推荐' : 'Hide shopping recommendations'],
-    ['hideRelatedRecs', language === 'zh-CN' ? '隐藏相关推荐' : 'Hide related recommendations'],
-    ['hideRelatedProducts', language === 'zh-CN' ? '隐藏相关商品' : 'Hide related products'],
-    ['hideInterruptModals', language === 'zh-CN' ? '隐藏部分干扰弹窗' : 'Hide some interruptive modals']
-  ];
-  for (const [key, label] of fields) {
-    box.append(row(label, language === 'zh-CN' ? '每项独立控制，无“深度净化”一键' : 'Independent switches only', switchInput(Boolean(cfg[key]), (value) => persist({ pageCleaner: { ...cfg, [key]: value } }))));
+function renderLayout() {
+  const onHome = current === 'home';
+  homePanel.classList.toggle('hidden', !onHome);
+  detailPanel.classList.toggle('hidden', onHome);
+  homePanel.toggleAttribute('inert', !onHome);
+  detailPanel.toggleAttribute('inert', onHome);
+  document.documentElement.lang = language;
+  if (onHome) {
+    document.title = t('settingsTitle');
+    renderFilterPages();
+    return;
   }
-  root.append(box);
+  const meta = FILTER_SECTIONS.find((item) => item[0] === current) || FILTER_SECTIONS[0];
+  viewTitle.textContent = t(meta[1]);
+  document.title = `Pinterest Cleaner · ${t(meta[1])}`;
+  view.textContent = '';
+  if (current === 'keywords') return view.append(ruleEditor('keywordRules'));
+  if (current === 'creators') return view.append(ruleEditor('creatorRules'));
+  if (current === 'domains') return view.append(ruleEditor('domainRules'));
+  return renderTypes(view);
 }
 
-function renderStats(root) {
-  const box = card();
-  const grid = el('div', 'stats-grid');
-  for (const [key, label] of Object.entries({
-    total: language === 'zh-CN' ? '总计' : 'Total',
-    ai: 'AI',
-    ad: language === 'zh-CN' ? '广告' : 'Ads',
-    keyword: language === 'zh-CN' ? '关键词' : 'Keywords',
-    creator: language === 'zh-CN' ? '发布者' : 'Creators',
-    domain: language === 'zh-CN' ? '来源' : 'Domains',
-    contentType: language === 'zh-CN' ? '内容类型' : 'Types',
-    pageCleaner: language === 'zh-CN' ? '页面净化' : 'Page cleaner'
-  })) {
-    const item = el('div', 'stat');
-    item.append(el('span', null, label), el('b', null, String(settings.stats?.[key] || 0)));
-    grid.append(item);
-  }
-  box.append(el('p', 'muted', language === 'zh-CN' ? `统计日期：${settings.stats?.day || '-'}` : `Day: ${settings.stats?.day || '-'}`), grid);
-  root.append(box);
-}
-
-function renderData(root) {
-  const box = card();
-  const toolbar = el('div', 'toolbar');
-  const exportBtn = el('button', 'btn btn-primary', language === 'zh-CN' ? '导出设置' : 'Export settings');
-  const importBtn = el('button', 'btn', language === 'zh-CN' ? '导入设置' : 'Import settings');
-  const resetBtn = el('button', 'btn btn-danger', language === 'zh-CN' ? '恢复默认' : 'Reset defaults');
-  const file = el('input', 'input');
-  file.type = 'file';
-  file.accept = 'application/json,.json';
-  file.hidden = true;
-
+function bindBackup() {
+  const exportBtn = document.getElementById('export-settings');
+  const importBtn = document.getElementById('import-settings');
+  const resetBtn = document.getElementById('reset-defaults');
+  const file = document.getElementById('backup-file');
   exportBtn.addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(exportBackup(settings), null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -418,108 +268,407 @@ function renderData(root) {
     a.click();
     URL.revokeObjectURL(url);
   });
-
   importBtn.addEventListener('click', () => file.click());
   file.addEventListener('change', async () => {
     const chosen = file.files?.[0];
+    file.value = '';
     if (!chosen) return;
-    const text = await chosen.text();
-    settings = await replaceSettings(importBackup(text));
-    language = resolveLanguage(settings.language);
-    saveStatus.textContent = t('saved');
-    renderNav();
-    renderView();
+    try {
+      settings = await replaceSettings(importBackup(await chosen.text()));
+      language = resolveLanguage(settings.language);
+      applyTranslations(document, language);
+      syncChromeLangControls();
+      paintTheme(settings.theme);
+      toast(`✓ ${t('saved')}`, 'ok');
+    } catch {
+      toast(t('failed'), 'error');
+    }
   });
-
   resetBtn.addEventListener('click', async () => {
-    if (!confirm(language === 'zh-CN' ? '确认恢复默认并清空规则？' : 'Reset all settings and rules?')) return;
+    const ok = await confirmDialog({
+      title: t('resetDefaults'),
+      message: t('resetConfirm'),
+      confirmLabel: t('resetDefaults'),
+      danger: true
+    });
+    if (!ok) return;
     await clearSettings();
     settings = await loadSettings();
-    renderNav();
-    renderView();
+    language = resolveLanguage(settings.language);
+    applyTranslations(document, language);
+    syncChromeLangControls();
+    paintTheme(settings.theme);
+    toast(`✓ ${t('saved')}`, 'ok');
   });
-
-  toolbar.append(exportBtn, importBtn, resetBtn, file);
-  box.append(toolbar, el('p', 'muted', language === 'zh-CN' ? '默认不导出统计数据。' : 'Stats are excluded from exports by default.'));
-  root.append(box);
 }
 
-async function renderAdvanced(root) {
+function ruleEditor(kind) {
   const box = card();
-  box.append(
-    row(language === 'zh-CN' ? '安全模式' : 'Safe mode', language === 'zh-CN' ? '仅高置信度过滤' : 'High-confidence filters only', switchInput(settings.safeMode, (safeMode) => persist({ safeMode }))),
-    row(language === 'zh-CN' ? '诊断模式' : 'Diagnostics', language === 'zh-CN' ? '输出更多本地日志' : 'Verbose local logging', switchInput(settings.diagnostics, (diagnostics) => persist({ diagnostics }))),
-    row(language === 'zh-CN' ? '日志等级' : 'Log level', '', selectInput(settings.logLevel, ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'].map((v) => [v, v]), (logLevel) => persist({ logLevel })))
-  );
-  root.append(box);
+  const toolbar = el('div', 'toolbar');
+  const addBtn = el('button', 'btu-btn btu-btn--primary', t('addRule'));
+  addBtn.type = 'button';
+  const search = el('input', 'input');
+  search.type = 'search';
+  search.placeholder = t('searchRules');
+  search.setAttribute('aria-label', t('searchRules'));
+  const sort = selectInput('manual', [
+    ['manual', t('sortManual')],
+    ['name', t('sortName')]
+  ], () => refresh());
+  sort.setAttribute('aria-label', t('ruleSort'));
+  toolbar.append(addBtn, search, sort);
+  box.append(toolbar);
+  const editor = el('div', 'rule-editor');
+  editor.hidden = true;
+  box.append(editor);
+  const list = el('div', 'rule-list');
+  box.append(list);
 
-  const diag = card();
-  const pre = el('pre', 'diag', language === 'zh-CN' ? '正在读取当前标签页诊断…' : 'Reading active tab diagnostics…');
-  diag.append(el('h2', null, language === 'zh-CN' ? '诊断快照' : 'Diagnostics snapshot'), pre);
-  root.append(diag);
+  const field = (labelText, control, help = '') => {
+    const label = el('label', 'form-field');
+    label.append(el('span', null, labelText), control);
+    if (help) label.append(el('small', null, help));
+    return label;
+  };
+  const textInput = (value = '', placeholder = '') => {
+    const input = el('input', 'input');
+    input.type = 'text';
+    input.value = value;
+    input.placeholder = placeholder;
+    return input;
+  };
+  const checkboxGroup = (values) => {
+    const wrap = el('div', 'check-group');
+    for (const [value, labelText, checked] of values) {
+      const label = el('label', 'check-option');
+      const input = el('input');
+      input.type = 'checkbox';
+      input.value = value;
+      input.checked = checked;
+      label.append(input, document.createTextNode(labelText));
+      wrap.append(label);
+    }
+    return wrap;
+  };
 
-  try {
-    const tabs = await EXT.tabs?.query?.({ active: true, currentWindow: true }) || [];
-    const tab = tabs[0];
-    if (!tab?.id) {
-      pre.textContent = 'No active tab';
+  const ruleTitle = (rule) => {
+    if (kind === 'keywordRules') return rule.name || t('keywordRule');
+    if (kind === 'creatorRules') return rule.username ? `@${rule.username}` : rule.displayName || t('creator');
+    if (kind === 'domainRules') return rule.pattern || t('domain');
+    return `${rule.type}: ${rule.value}`;
+  };
+
+  const ruleDetail = (rule) => {
+    if (kind === 'keywordRules') {
+      return `${rule.operator} · ${rule.matchType}${rule.caseSensitive ? ` · ${t('caseSensitiveShort')}` : ''}\n${(rule.keywords || []).join('\n')}${rule.note ? `\n${rule.note}` : ''}`;
+    }
+    if (kind === 'creatorRules') return [rule.displayName, rule.note].filter(Boolean).join(' · ');
+    if (kind === 'domainRules') return [rule.matchType, rule.note].filter(Boolean).join(' · ');
+    return rule.note || '';
+  };
+
+  const showEditor = (existing = null) => {
+    const rule = existing || (kind === 'keywordRules'
+      ? { id: createId('kw'), enabled: true, name: '', operator: 'OR', keywords: [], fields: ['title', 'description', 'alt', 'creator'], matchType: 'contains', caseSensitive: false, note: '' }
+      : kind === 'creatorRules'
+        ? { id: createId('cr'), enabled: true, username: '', displayName: '', note: '' }
+        : kind === 'domainRules'
+          ? { id: createId('dm'), enabled: true, pattern: '', matchType: 'exact', note: '' }
+          : { id: createId('wl'), enabled: true, type: 'keyword', value: '', note: '' });
+    editor.textContent = '';
+    editor.hidden = false;
+    const form = el('form', 'rule-form');
+    const heading = el('h2', null, existing ? t('editRule') : t('addRule'));
+    const error = el('p', 'form-error');
+    error.hidden = true;
+    error.setAttribute('role', 'alert');
+    const enabled = el('input');
+    enabled.type = 'checkbox';
+    enabled.checked = rule.enabled;
+    const enabledLabel = el('label', 'check-option');
+    enabledLabel.append(enabled, document.createTextNode(t('enabledLabel')));
+    form.append(heading, enabledLabel);
+
+    let controls;
+    if (kind === 'keywordRules') {
+      const name = textInput(rule.name);
+      const keywords = el('textarea', 'textarea');
+      keywords.value = (rule.keywords || []).join('\n');
+      keywords.placeholder = t('keywordsPlaceholder');
+      const operator = selectInput(rule.operator, [['OR', 'OR'], ['AND', 'AND']], () => {});
+      const matchType = selectInput(rule.matchType, [
+        ['contains', t('matchContains')],
+        ['exact', t('matchExact')],
+        ['regex', t('matchRegex')]
+      ], () => {});
+      const fields = checkboxGroup([
+        ['title', t('fieldTitle'), rule.fields?.includes('title')],
+        ['description', t('fieldDescription'), rule.fields?.includes('description')],
+        ['alt', t('fieldAlt'), rule.fields?.includes('alt')],
+        ['creator', t('fieldCreator'), rule.fields?.includes('creator')]
+      ]);
+      const caseSensitive = el('input');
+      caseSensitive.type = 'checkbox';
+      caseSensitive.checked = rule.caseSensitive;
+      const caseLabel = el('label', 'check-option');
+      caseLabel.append(caseSensitive, document.createTextNode(t('caseSensitive')));
+      const note = el('textarea', 'textarea');
+      note.value = rule.note || '';
+      form.append(
+        field(t('ruleName'), name),
+        field(t('keywordsLabel'), keywords),
+        field(t('logic'), operator),
+        field(t('matchType'), matchType),
+        field(t('searchIn'), fields),
+        caseLabel,
+        field(t('note'), note)
+      );
+      controls = { name, keywords, operator, matchType, fields, caseSensitive, note };
+    } else if (kind === 'creatorRules') {
+      const username = textInput(rule.username, t('usernamePlaceholder'));
+      const displayName = textInput(rule.displayName);
+      const note = el('textarea', 'textarea');
+      note.value = rule.note || '';
+      form.append(
+        field(t('username'), username),
+        field(t('displayName'), displayName),
+        field(t('note'), note)
+      );
+      controls = { username, displayName, note };
+    } else if (kind === 'domainRules') {
+      const pattern = textInput(rule.pattern, 'example.com');
+      const matchType = selectInput(rule.matchType, [
+        ['exact', t('matchExactDomain')],
+        ['subdomain', t('matchSubdomain')],
+        ['wildcard', t('matchWildcard')]
+      ], () => {});
+      const note = el('textarea', 'textarea');
+      note.value = rule.note || '';
+      form.append(
+        field(t('domainPattern'), pattern),
+        field(t('matchType'), matchType),
+        field(t('note'), note)
+      );
+      controls = { pattern, matchType, note };
+    } else {
+      const type = selectInput(rule.type, [
+        ['keyword', t('typeKeyword')],
+        ['creator', t('typeCreator')],
+        ['domain', t('typeDomain')]
+      ], () => {});
+      const value = textInput(rule.value);
+      const note = el('textarea', 'textarea');
+      note.value = rule.note || '';
+      form.append(
+        field(t('allowType'), type),
+        field(t('value'), value),
+        field(t('note'), note)
+      );
+      controls = { type, value, note };
+    }
+
+    const actions = el('div', 'toolbar');
+    const save = el('button', 'btu-btn btu-btn--primary', t('saveRule'));
+    save.type = 'submit';
+    const cancel = el('button', 'btu-btn btu-btn--secondary', t('cancel'));
+    cancel.type = 'button';
+    cancel.addEventListener('click', () => { editor.hidden = true; editor.textContent = ''; });
+    actions.append(save, cancel);
+    form.append(error, actions);
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const fail = (message) => { error.textContent = message; error.hidden = false; };
+      let next;
+      if (kind === 'keywordRules') {
+        const keywords = controls.keywords.value
+          .split(controls.matchType.value === 'regex' ? /\n/ : /[,，\n]/)
+          .map((value) => value.trim())
+          .filter(Boolean);
+        if (!controls.name.value.trim() || !keywords.length) return fail(t('errKeywordRequired'));
+        if (controls.matchType.value === 'regex') {
+          try {
+            keywords.forEach((keyword) => new RegExp(keyword, controls.caseSensitive.checked ? '' : 'i'));
+          } catch (regexError) {
+            return fail(t('errInvalidRegex', { message: regexError.message }));
+          }
+        }
+        const fields = [...controls.fields.querySelectorAll('input:checked')].map((input) => input.value);
+        if (!fields.length) return fail(t('errFieldRequired'));
+        next = {
+          ...rule,
+          enabled: enabled.checked,
+          name: controls.name.value.trim(),
+          keywords,
+          operator: controls.operator.value,
+          matchType: controls.matchType.value,
+          fields,
+          caseSensitive: controls.caseSensitive.checked,
+          note: controls.note.value.trim()
+        };
+      } else if (kind === 'creatorRules') {
+        if (![controls.username.value, controls.displayName.value].some((value) => value.trim())) {
+          return fail(t('errCreatorRequired'));
+        }
+        next = {
+          ...rule,
+          enabled: enabled.checked,
+          username: controls.username.value.replace(/^@/, '').trim(),
+          displayName: controls.displayName.value.trim(),
+          note: controls.note.value.trim()
+        };
+      } else if (kind === 'domainRules') {
+        if (!controls.pattern.value.trim()) return fail(t('errDomainRequired'));
+        next = {
+          ...rule,
+          enabled: enabled.checked,
+          pattern: controls.pattern.value.trim().toLowerCase(),
+          matchType: controls.matchType.value,
+          note: controls.note.value.trim()
+        };
+      } else {
+        if (!controls.value.value.trim()) return fail(t('errWhitelistRequired'));
+        next = {
+          ...rule,
+          enabled: enabled.checked,
+          type: controls.type.value,
+          value: controls.value.value.trim(),
+          note: controls.note.value.trim()
+        };
+      }
+      const nextRules = existing
+        ? settings[kind].map((item) => item.id === rule.id ? next : item)
+        : [...settings[kind], next];
+      await persist({ [kind]: nextRules });
+    });
+    editor.append(form);
+    form.querySelector('input, textarea, select')?.focus();
+  };
+
+  const refresh = () => {
+    list.textContent = '';
+    const query = search.value.trim().toLocaleLowerCase();
+    const rules = (settings[kind] || []).map((rule, index) => ({ rule, index }))
+      .filter(({ rule }) => !query || `${ruleTitle(rule)} ${ruleDetail(rule)}`.toLocaleLowerCase().includes(query))
+      .sort((a, b) => sort.value === 'name' ? ruleTitle(a.rule).localeCompare(ruleTitle(b.rule)) : a.index - b.index);
+    if (!rules.length) {
+      list.append(el('p', 'muted', query ? t('noMatchingRules') : t('noRules')));
       return;
     }
-    const response = await EXT.tabs.sendMessage(tab.id, { type: 'PC_GET_STATUS' });
-    pre.textContent = JSON.stringify(response, null, 2);
-  } catch {
-    pre.textContent = language === 'zh-CN'
-      ? '当前标签页不是 Pinterest，或内容脚本尚未注入。'
-      : 'Active tab is not Pinterest, or content script is not injected.';
-  }
+    for (const { rule, index } of rules) {
+      const item = el('article', 'rule-item');
+      const body = el('div', 'rule-item__copy');
+      body.append(el('h3', null, ruleTitle(rule)));
+      const detail = ruleDetail(rule);
+      if (detail) body.append(el('p', null, detail));
+      const actions = el('div', 'rule-actions');
+      const toggle = switchInput(rule.enabled, async (enabled) => {
+        const next = settings[kind].map((item) => item.id === rule.id ? { ...item, enabled } : item);
+        await persist({ [kind]: next });
+      });
+      toggle.setAttribute('aria-label', `${t('enable')} ${ruleTitle(rule)}`);
+      const edit = el('button', 'btu-btn btu-btn--secondary', t('edit'));
+      edit.type = 'button';
+      edit.addEventListener('click', () => showEditor(rule));
+      const moveUp = el('button', 'btu-btn btu-btn--secondary btu-btn--icon', '↑');
+      moveUp.type = 'button';
+      moveUp.disabled = index === 0;
+      moveUp.setAttribute('aria-label', t('moveRuleUp'));
+      moveUp.addEventListener('click', async () => {
+        const next = [...settings[kind]];
+        [next[index - 1], next[index]] = [next[index], next[index - 1]];
+        await persist({ [kind]: next });
+      });
+      const moveDown = el('button', 'btu-btn btu-btn--secondary btu-btn--icon', '↓');
+      moveDown.type = 'button';
+      moveDown.disabled = index === settings[kind].length - 1;
+      moveDown.setAttribute('aria-label', t('moveRuleDown'));
+      moveDown.addEventListener('click', async () => {
+        const next = [...settings[kind]];
+        [next[index], next[index + 1]] = [next[index + 1], next[index]];
+        await persist({ [kind]: next });
+      });
+      const remove = el('button', 'btu-btn btu-btn--secondary', t('delete'));
+      remove.type = 'button';
+      remove.addEventListener('click', async () => {
+        await persist({ [kind]: settings[kind].filter((item) => item.id !== rule.id) });
+      });
+      actions.append(toggle, edit, moveUp, moveDown, remove);
+      item.append(body, actions);
+      list.append(item);
+    }
+  };
+
+  addBtn.addEventListener('click', () => showEditor());
+  search.addEventListener('input', refresh);
+  refresh();
+  return box;
 }
 
-function renderAbout(root) {
+
+function renderTypes(root) {
   const box = card();
-  box.append(
-    el('h2', null, 'Pinterest Cleaner'),
-    el('p', null, language === 'zh-CN'
-      ? '本地运行的 Pinterest 内容净化扩展。处理仅发生在浏览器本地，规则与浏览内容不会上传。'
-      : 'A local-first Pinterest content cleaner. Processing stays in your browser; rules and browsing content are never uploaded.'),
-    el('p', 'muted', 'v1.0.0 · Edge / Chrome / Firefox'),
-    el('p', 'muted', 'hangdudu0@agent.qq.com')
-  );
+  const cfg = settings.contentTypes;
+  for (const [key, labelKey] of [
+    ['hideVideo', 'hideVideo']
+  ]) {
+    box.append(row(t(labelKey), '', switchInput(Boolean(cfg[key]), (value) => persist({ contentTypes: { ...cfg, [key]: value } }))));
+  }
   root.append(box);
 }
 
-function renderView() {
-  const meta = SECTIONS.find((item) => item[0] === current) || SECTIONS[0];
-  viewTitle.textContent = t(meta[1]);
-  viewDesc.textContent = t(meta[2]);
-  document.title = `Pinterest Cleaner · ${t(meta[1])}`;
-  view.textContent = '';
-
-  if (current === 'overview') return renderOverview(view);
-  if (current === 'ai') return renderAi(view);
-  if (current === 'ads') return renderAds(view);
-  if (current === 'keywords') return view.append(ruleEditor('keywordRules'));
-  if (current === 'creators') return view.append(ruleEditor('creatorRules'));
-  if (current === 'domains') return view.append(ruleEditor('domainRules'));
-  if (current === 'types') return renderTypes(view);
-  if (current === 'page') return renderPage(view);
-  if (current === 'whitelist') return view.append(ruleEditor('whitelistRules'));
-  if (current === 'stats') return renderStats(view);
-  if (current === 'data') return renderData(view);
-  if (current === 'advanced') return renderAdvanced(view);
-  return renderAbout(view);
-}
-
-window.addEventListener('hashchange', () => {
-  current = (location.hash || '#overview').replace('#', '') || 'overview';
-  renderNav();
-  renderView();
+document.getElementById('filter-nav').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-section]');
+  if (button) showSection(button.dataset.section);
+});
+document.getElementById('back-home').addEventListener('click', () => showSection('home'));
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && current !== 'home') {
+    event.preventDefault();
+    showSection('home');
+  }
 });
 
-loadSettings().then((value) => {
+languageSelect.addEventListener('change', () => persist({ language: languageSelect.value }));
+themePicker.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-theme-id]');
+  if (!button || !settings) return;
+  const nextTheme = button.dataset.themeId;
+  const previous = settings.theme;
+  paintTheme(nextTheme);
+  try {
+    settings = await saveSettings({ theme: nextTheme });
+    syncThemePicker(themePicker, themes, settings.theme, themeLabel);
+    toast(`✓ ${t('saved')}`, 'ok');
+  } catch {
+    paintTheme(previous);
+    toast(t('saveFailed'), 'error');
+  }
+});
+
+window.addEventListener('hashchange', () => {
+  current = sectionFromHash();
+  renderLayout();
+});
+
+EXT.storage?.onChanged?.addListener((changes, area) => {
+  if (area !== 'local' || !changes[OPEN_SECTION_KEY]?.newValue) return;
+  consumeOpenSection().catch(() => {});
+});
+
+Promise.all([loadSettings(), loadThemeDefinitions()]).then(async ([value, themeList]) => {
   settings = value;
+  themes = themeList;
   language = resolveLanguage(settings.language);
-  renderNav();
-  renderView();
+  applyTranslations(document, language);
+  syncChromeLangControls();
+  bindBackup();
+  renderThemePicker(themePicker, themes);
+  paintTheme(resolveTheme(settings.theme, themes)?.id || 'obsidian');
+  const opened = await consumeOpenSection();
+  if (!opened) {
+    current = sectionFromHash();
+    renderLayout();
+  }
 }).catch((error) => {
-  saveStatus.textContent = String(error?.message || error);
+  toast(String(error?.message || error), 'error');
 });

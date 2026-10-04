@@ -1,8 +1,8 @@
 {
   "extName": {
-    "message": "Pinterest Cleaner - AI Filter & Ad Blocker"
+    "message": "Pinterest Cleaner - Ad Blocker & Content Filters"
   },
   "extDesc": {
-    "message": "Locally hide AI content, promoted pins, and custom filter rules on Pinterest. No data uploaded."
+    "message": "Locally hide promoted pins and content matching custom filter rules on Pinterest. No data uploaded."
   }
 }

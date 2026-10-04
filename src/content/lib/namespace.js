@@ -8,17 +8,18 @@
     reason: 'data-pc-reason',
     rule: 'data-pc-rule',
     processed: 'data-pc-processed',
-    module: 'data-pc-module'
+    module: 'data-pc-module',
+    slot: 'data-pc-collapsed-slot'
   };
   root.EXT = typeof browser !== 'undefined' ? browser : chrome;
 
-  root.todayKey = () => new Date().toISOString().slice(0, 10);
+  root.todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
   root.DEFAULT_SETTINGS = Object.freeze({
     schemaVersion: 1,
     enabled: true,
     language: 'en',
-    theme: 'default',
+    theme: 'obsidian',
     pause: { mode: 'off', until: 0, tabOnly: false },
     showFiltered: false,
     safeMode: false,
@@ -39,6 +40,11 @@
       hideGif: false,
       hideShopping: false,
       hideIdeaPin: false
+    },
+    filterPages: {
+      home: true,
+      search: true,
+      detail: true
     },
     pageCleaner: {
       hidePromoModules: true,
